@@ -44,9 +44,12 @@ remove_file "public/index.html"
     generate "devise:views"
 
 
+
+
+
     gsub_file 'config/environments/development.rb', /config.action_mailer.raise_delivery_errors = false/ do
         <<-RUBY
-            config.action_mailer.default_url_options = { :host => ENV['server_host']+':'+ENV['server_port'] }
+            config.action_mailer.default_url_options = { :host => "localhost:3000" }
             # A dummy setup for development - no deliveries, but logged
                         
             config.action_mailer.delivery_method = :smtp
@@ -114,14 +117,8 @@ remove_file "public/index.html"
 
 #end
 
-
 #setting template
 
-
-git :init
-run "cp ~/common_lib/rails/.gitignore ./"
-git add: "."
-git commit: %Q{ -m 'Initial commit' }
 
 def tmpl_name(name)
     orig_file="../tmpl/#{name}"
@@ -157,8 +154,33 @@ lists.split().each{|f|
     run 'cp '+ dir+f+' '+dest_dir(f)
 }
 
+# for application.yml refer to https://github.com/railscasts/085-yaml-configuration-revised/blob/master/blog-after/config/application.rb
+gsub_file 'config/application.rb', /if defined\?\(Bundler\)/ 
+do
+
+<<-RUBY
+
+#setting load secret variables
+config = YAML.load(File.read(File.expand_path('../application.yml', __FILE__)))
+config.merge! config.fetch(Rails.env, {})
+config.each do |key, value|
+  ENV[key] = value unless value.kind_of? Hash
+end
+
+if defined?(Bundler)
+
+RUBY
+
+end
+
 
 
 #finish
 rake "db:migrate"
 rake "routes"
+
+#github commit
+git :init
+run "cp ~/common_lib/rails/.gitignore ./"
+git add: "."
+git commit: %Q{ -m 'Initial commit' }

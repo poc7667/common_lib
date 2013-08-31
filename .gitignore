@@ -1,2 +1,4 @@
 *.pyc
 .ropeproject/
+#for store screte file
+config.application.yml
