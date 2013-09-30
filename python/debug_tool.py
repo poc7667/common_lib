@@ -19,6 +19,9 @@ def mk_log(msg,out_file="./log.txt"):
 
 
 def debug_print(new_cnt, func_name="NULL", flag=True):
+    '''
+    use nested 
+    '''
     global _debug_cnt
     
     _debug_cnt=new_cnt

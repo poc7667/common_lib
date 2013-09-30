@@ -20,6 +20,7 @@ gem 'quiet_assets', :group => :development #https://github.com/evrone/quiet_asse
 gem 'faker' ,:group => :development
 gem "faker-isbn", "~> 0.0.4" , :group => :development
 gem 'tinymce-rails'
+gem 'simple_form'
 
 
 #run "bundle install"
@@ -28,7 +29,8 @@ gem 'tinymce-rails'
 #cols = ask("input cols you want").underscore
 #end
 
-name="book"
+#name="book"
+name="order"
 cols="name:string isbn:integer price:integer comment:text"
 generate :scaffold, "#{name}  #{cols}"
 route "root :to=> '#{name.pluralize}\#index'"
@@ -114,8 +116,15 @@ remove_file "public/index.html"
         RUBY
     end
 
+    #install simple form 
+    #http://railscasts.com/episodes/234-simple-form-revised?view=asciicast
+    run 'rails g simple_form:install'
+
 
 #end
+    
+    
+
 
 #setting template
 
@@ -155,8 +164,7 @@ lists.split().each{|f|
 }
 
 # for application.yml refer to https://github.com/railscasts/085-yaml-configuration-revised/blob/master/blog-after/config/application.rb
-gsub_file 'config/application.rb', /if defined\?\(Bundler\)/ 
-do
+gsub_file 'config/application.rb', /if defined\?\(Bundler\)/  do
 
 <<-RUBY
 
