@@ -60,9 +60,127 @@ class ConvertHelper():
             sys.exit(e)
             raise e
 
+class StyleHelper():
+    BG_WHITE = 1
+    def get_style(self, bg=BG_WHITE, fg='black', ft_size=12, alignment='center'):
+        try:
+            style_setting=""
+            bg_color = "pattern: pattern solid, fore-color %i;" % bg
+            ft_color="font: colour %s;" % fg
+            ft_size="font:height %i;" %( ft_size * 20)
+            ft_sty="alignment: horizontal %s, vertical center, wrap true; \
+             font: name Consolas, bold 1;" % alignment
+
+            style_setting = bg_color + ft_color + ft_size + ft_sty
+            st = xlwt.easyxf(style_setting)
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print("[Error]\n", exc_type, fname, exc_tb.tb_lineno)
+            sys.exit(e)
+            raise e
+
+    def copyXF(self, rdbook,rdxf):
+        
+        """
+        clone a XFstyle from xlrd XF class,the code is copied from xlutils.copy module
+        # http://daniel-zhy.livejournal.com/32068.html
+
+        """        
+
+        
+        wtxf = xlwt.Style.XFStyle()
+        #
+        # number format
+        #
+        wtxf.num_format_str = rdbook.format_map[rdxf.format_key].format_str
+        #
+        # font
+        #
+        wtf = wtxf.font
+        rdf = rdbook.font_list[rdxf.font_index]
+        wtf.height = rdf.height
+        wtf.italic = rdf.italic
+        wtf.struck_out = rdf.struck_out
+        wtf.outline = rdf.outline
+        wtf.shadow = rdf.outline
+        wtf.colour_index = rdf.colour_index
+        wtf.bold = rdf.bold #### This attribute is redundant, should be driven by weight
+        wtf._weight = rdf.weight #### Why "private"?
+        wtf.escapement = rdf.escapement
+        wtf.underline = rdf.underline_type #### 
+        # wtf.???? = rdf.underline #### redundant attribute, set on the fly when writing
+        wtf.family = rdf.family
+        wtf.charset = rdf.character_set
+        wtf.name = rdf.name
+        # 
+        # protection
+        #
+        wtp = wtxf.protection
+        rdp = rdxf.protection
+        wtp.cell_locked = rdp.cell_locked
+        wtp.formula_hidden = rdp.formula_hidden
+        #
+        # border(s) (rename ????)
+        #
+        wtb = wtxf.borders
+        rdb = rdxf.border
+        wtb.left   = rdb.left_line_style
+        wtb.right  = rdb.right_line_style
+        wtb.top    = rdb.top_line_style
+        wtb.bottom = rdb.bottom_line_style 
+        wtb.diag   = rdb.diag_line_style
+        wtb.left_colour   = rdb.left_colour_index 
+        wtb.right_colour  = rdb.right_colour_index 
+        wtb.top_colour    = rdb.top_colour_index
+        wtb.bottom_colour = rdb.bottom_colour_index 
+        wtb.diag_colour   = rdb.diag_colour_index 
+        wtb.need_diag1 = rdb.diag_down
+        wtb.need_diag2 = rdb.diag_up
+        #
+        # background / pattern (rename???)
+        #
+        wtpat = wtxf.pattern
+        rdbg = rdxf.background
+        wtpat.pattern = rdbg.fill_pattern
+        wtpat.pattern_fore_colour = rdbg.pattern_colour_index
+        wtpat.pattern_back_colour = rdbg.background_colour_index
+        #
+        # alignment
+        #
+        wta = wtxf.alignment
+        rda = rdxf.alignment
+        wta.horz = rda.hor_align
+        wta.vert = rda.vert_align
+        wta.dire = rda.text_direction
+        # wta.orie # orientation doesn't occur in BIFF8! Superceded by rotation ("rota").
+        wta.rota = rda.rotation
+        wta.wrap = rda.text_wrapped
+        wta.shri = rda.shrink_to_fit
+        wta.inde = rda.indent_level
+        # wta.merg = ????
+        #
+        return wtxf    
     
 class ReadWrite(ConvertHelper):
     """docstring for XLS"""
+
+    def wt_a_row(self, sht, i_row, val_lst,style=None):
+        try:
+            for cnt, val in enumerate(val_lst):
+                if style:
+                    sht.write(i_row, cnt, val, style)
+                else:
+                    sht.write(i_row, cnt, val)
+
+            pass
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print("[Error]\n", exc_type, fname, exc_tb.tb_lineno)
+            sys.exit(e)
+            raise e
+
 
     def rd_range(self, sht, i_row, i_col, n_row, n_col):
         '''
@@ -115,9 +233,14 @@ class ReadWrite(ConvertHelper):
 
     def get_cell(self, sht, row, col):
         try:
-            # c_type
+            # c_type #放在之後再去想要怎麼去檢查check,嘗試轉成int -> float -> string
             c_type = sht.cell(row, col).ctype
             c_val = sht.cell_value(row, col)
+            try:
+                c_val = float(c_val)
+            except:
+                    c_val = str(c_val)
+
             return c_val
 
         except Exception as e:
@@ -176,13 +299,21 @@ class XlsTools(ConvertHelper, ReadWrite):
                 scan_rng = (0, 0, sht.nrows - 1 , sht.n_cols - 1)
             else: #
                 sys.exit("find_all_cell_index error")
+            try:
+                for i in range(scan_rng[0], scan_rng[2]+1):
+                    for j in range(scan_rng[1], scan_rng[3]+1):
+                        c_val = str(self.get_cell(sht, i, j))
+                        if s in c_val:
+                            all_list.append((i, j, c_val))
 
-            for i in range(scan_rng[0], scan_rng[2]+1):
-                for j in range(scan_rng[1], scan_rng[3]+1):
-                    c_val = str(self.get_cell(sht, i, j))
-                    if s in c_val:
-                        print(c_val)
-                        all_list.append((i, j, c_val))
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print("[Error]\n", exc_type, fname, exc_tb.tb_lineno)
+                print("scan rng")
+                sys.exit(e)
+                raise e
+
 
             return all_list
 
@@ -190,10 +321,12 @@ class XlsTools(ConvertHelper, ReadWrite):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print("[Error]\n", exc_type, fname, exc_tb.tb_lineno)
+            print("scan_rng")
+            print(scan_rng)
             sys.exit(e)
             raise e
 
-'''
+
 class FormalFormat():
     def get_note(self, s):
 
@@ -246,4 +379,3 @@ class FormalFormat():
         else:
             return None
         pass
-'''
